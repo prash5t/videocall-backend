@@ -28,7 +28,7 @@ def register_events(socketio):
     def handle_call_request(data):
         caller_email = data['caller_email']
         callee_email = data['callee_email']
-        call_id = str(uuid.uuid4())
+        call_id = f"{caller_email}_{callee_email}_{str(uuid.uuid4())}"
 
         if callee_email in users:
             emit('incoming_call', {
@@ -50,38 +50,15 @@ def register_events(socketio):
 
         if response == 'accept':
             emit('call_accepted', {
-                 'call_id': call_id,
-                 'callee_email': callee_email
-                 }, room=caller_email)
+                 'call_id': call_id, 'callee_email': callee_email}, room=caller_email)
             active_calls[call_id] = {'start_time': datetime.now(), 'participants': [
                 caller_email, callee_email]}
             log_call(call_id, caller_email, callee_email, 'accepted',
                      start_time=active_calls[call_id]['start_time'])
-
-            # Notify both parties to start WebRTC process
-            emit('start_webrtc', {'call_id': call_id,
-                 'peer': caller_email}, room=callee_email)
-            emit('start_webrtc', {'call_id': call_id,
-                 'peer': callee_email}, room=caller_email)
         else:
             emit('call_rejected', {
                  'call_id': call_id, 'callee_email': callee_email}, room=caller_email)
             log_call(call_id, caller_email, callee_email, 'rejected')
-
-    @socketio.on('cancel_call')
-    def handle_cancel_call(data):
-        call_id = data['call_id']
-        caller_email = data['caller_email']
-        callee_email = data['callee_email']
-
-        # Notify the callee that the call has been cancelled
-        if callee_email in users:
-            emit('call_cancelled', {
-                'call_id': call_id,
-                'caller_email': caller_email
-            }, room=callee_email)
-
-        log_call(call_id, caller_email, callee_email, 'cancelled')
 
     @socketio.on('ice_candidate')
     def handle_ice_candidate(data):
@@ -105,9 +82,11 @@ def register_events(socketio):
     def handle_end_call(data):
         target_email = data['target_email']
         call_id = data['call_id']
+        caller_email = data['caller_email']
+
         if target_email in users:
             emit('call_ended', {
-                 'caller_email': data['caller_email']}, room=target_email)
+                 'caller_email': caller_email}, room=target_email)
 
         if call_id in active_calls:
             end_time = datetime.now()
