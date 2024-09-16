@@ -29,3 +29,12 @@ def log_call(call_id, caller_email, callee_email, status, start_time=None, end_t
               (call_id, caller_email, callee_email, start_time, end_time, status, duration))
     conn.commit()
     conn.close()
+
+
+def get_call_logs():
+    conn = sqlite3.connect('videocall_logs.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM call_logs ORDER BY start_time DESC')
+    logs = c.fetchall()
+    conn.close()
+    return logs
